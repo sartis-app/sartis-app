@@ -234,11 +234,33 @@ dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag')})
 dz.addEventListener('dragleave',()=>dz.classList.remove('drag'));
 dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag');hf(e.dataTransfer.files)});
 
+function compressImage(dataUrl, callback) {
+  const img = new Image();
+  img.onload = function() {
+    const MAX = 1200;
+    let w = img.width, h = img.height;
+    if (w > MAX || h > MAX) {
+      if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+      else { w = Math.round(w * MAX / h); h = MAX; }
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, w, h);
+    callback(canvas.toDataURL('image/jpeg', 0.75));
+  };
+  img.src = dataUrl;
+}
+
 function hf(files){
   Array.from(files).forEach(f=>{
     if(!f.type.startsWith('image/'))return;
     const r=new FileReader();
-    r.onload=e=>{pending.push(e.target.result);rp();};
+    r.onload=e=>{
+      compressImage(e.target.result, compressed=>{
+        pending.push(compressed);rp();
+      });
+    };
     r.readAsDataURL(f);
   });
 }
