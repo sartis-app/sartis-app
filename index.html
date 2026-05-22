@@ -1,1 +1,393 @@
-function doGet(e) { const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Pedidos"); const data = sheet.getDataRange().getValues(); const headers = data[0]; const rows = data.slice(1).map(row => { let obj = {}; headers.forEach((h, i) => obj[h] = row[i]); return obj; }); return ContentService.createTextOutput(JSON.stringify(rows)) .setMimeType(ContentService.MimeType.JSON); } function getFotoFolder() { const name = "Sartis PersonalizaÃ§Ãµes - Fotos"; const folders = DriveApp.getFoldersByName(name); return folders.hasNext() ? folders.next() : DriveApp.createFolder(name); } function doPost(e) { const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Pedidos"); const payload = JSON.parse(e.postData.contents); function saveFotos(fotosBase64, pedidoId) { if (!fotosBase64 || fotosBase64 === '') return ''; const folder = getFotoFolder(); const urls = []; const fotos = fotosBase64.split('|||').filter(Boolean); fotos.forEach((f, i) => { if (f.startsWith('http')) { urls.push(f); return; } const match = f.match(/^data:image\/(.*?);base64,(.+)$/); if (!match) return; const ext = match[1].replace('jpeg','jpg'); const blob = Utilities.newBlob(Utilities.base64Decode(match[2]), 'image/'+match[1], pedidoId+'_'+i+'.'+ext); const file = folder.createFile(blob); file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); urls.push('https://drive.google.com/uc?id='+file.getId()); }); return urls.join('|||'); } if (payload.action === "add") { const urls = saveFotos(payload.fotos, payload.id); sheet.appendRow([payload.id, payload.cliente, payload.ref, payload.tipo, payload.local, payload.maquina, payload.operador, payload.data, payload.estado, payload.obs, urls]); } if (payload.action === "update") { const data = sheet.getDataRange().getValues(); for (let i = 1; i < data.length; i++) { if (String(data[i][0]) === String(payload.id)) { const existingUrls = String(data[i][10] || '').split('|||').filter(f => f.startsWith('http')); const newUrls = saveFotos(payload.fotos, payload.id); const newUrlsList = newUrls.split('|||').filter(Boolean); const allUrls = [...existingUrls, ...newUrlsList].join('|||'); sheet.getRange(i+1,1,1,11).setValues([[payload.id, payload.cliente, payload.ref, payload.tipo, payload.local, payload.maquina, payload.operador, payload.data, payload.estado, payload.obs, allUrls]]); break; } } } if (payload.action === "delete") { const data = sheet.getDataRange().getValues(); for (let i = 1; i < data.length; i++) { if (String(data[i][0]) === String(payload.id)) { sheet.deleteRow(i+1); break; } } } return ContentService.createTextOutput(JSON.stringify({ok:true})) .setMimeType(ContentService.MimeType.JSON); }function doGet(e) { const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Pedidos"); const data = sheet.getDataRange().getValues(); const headers = data[0]; const rows = data.slice(1).map(row => { let obj = {}; headers.forEach((h, i) => obj[h] = row[i]); return obj; }); return ContentService.createTextOutput(JSON.stringify(rows)) .setMimeType(ContentService.MimeType.JSON); } function getFotoFolder() { const name = "Sartis PersonalizaÃ§Ãµes - Fotos"; const folders = DriveApp.getFoldersByName(name); return folders.hasNext() ? folders.next() : DriveApp.createFolder(name); } function doPost(e) { const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Pedidos"); const payload = JSON.parse(e.postData.contents); function saveFotos(fotosBase64, pedidoId) { if (!fotosBase64 || fotosBase64 === '') return ''; const folder = getFotoFolder(); const urls = []; const fotos = fotosBase64.split('|||').filter(Boolean); fotos.forEach((f, i) => { if (f.startsWith('http')) { urls.push(f); return; } const match = f.match(/^data:image\/(.*?);base64,(.+)$/); if (!match) return; const ext = match[1].replace('jpeg','jpg'); const blob = Utilities.newBlob(Utilities.base64Decode(match[2]), 'image/'+match[1], pedidoId+'_'+i+'.'+ext); const file = folder.createFile(blob); file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); urls.push('https://drive.google.com/uc?id='+file.getId()); }); return urls.join('|||'); } if (payload.action === "add") { const urls = saveFotos(payload.fotos, payload.id); sheet.appendRow([payload.id, payload.cliente, payload.ref, payload.tipo, payload.local, payload.maquina, payload.operador, payload.data, payload.estado, payload.obs, urls]); } if (payload.action === "update") { const data = sheet.getDataRange().getValues(); for (let i = 1; i < data.length; i++) { if (String(data[i][0]) === String(payload.id)) { const existingUrls = String(data[i][10] || '').split('|||').filter(f => f.startsWith('http')); const newUrls = saveFotos(payload.fotos, payload.id); const newUrlsList = newUrls.split('|||').filter(Boolean); const allUrls = [...existingUrls, ...newUrlsList].join('|||'); sheet.getRange(i+1,1,1,11).setValues([[payload.id, payload.cliente, payload.ref, payload.tipo, payload.local, payload.maquina, payload.operador, payload.data, payload.estado, payload.obs, allUrls]]); break; } } } if (payload.action === "delete") { const data = sheet.getDataRange().getValues(); for (let i = 1; i < data.length; i++) { if (String(data[i][0]) === String(payload.id)) { sheet.deleteRow(i+1); break; } } } return ContentService.createTextOutput(JSON.stringify({ok:true})) .setMimeType(ContentService.MimeType.JSON); }
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sartis Personalizações</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+<meta name="theme-color" content="#f97316">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Sartis">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f3f4f6;min-height:100vh}
+.app{padding:20px;max-width:1400px;margin:0 auto}
+.topbar{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:12px;flex-wrap:wrap}
+.topbar h1{font-size:22px;font-weight:700;color:#1f2937}
+.topbar p{color:#6b7280;font-size:13px;margin-top:3px}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:40px;height:40px;background:#f97316;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff;flex-shrink:0}
+.btn-novo{background:#f97316;color:#fff;border:none;padding:11px 18px;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(249,115,22,.3)}
+.btn-novo:hover{background:#ea6c0a}
+.filters{background:#fff;border-radius:14px;padding:14px;margin-bottom:20px;display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:8px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.filters input,.filters select{border:1px solid #e5e7eb;border-radius:10px;padding:9px 12px;font-size:13px;outline:none;color:#374151;width:100%;background:#fff}
+.filters input:focus,.filters select:focus{border-color:#f97316;box-shadow:0 0 0 3px rgba(249,115,22,.12)}
+.btn-f{background:#1f2937;color:#fff;border:none;border-radius:10px;padding:9px 14px;font-size:13px;cursor:pointer;white-space:nowrap}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px}
+.card{background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.07);transition:box-shadow .2s,transform .15s}
+.card:hover{box-shadow:0 8px 24px rgba(0,0,0,.11);transform:translateY(-2px)}
+.cimg{width:100%;height:190px;background:#f9fafb;display:flex;align-items:center;justify-content:center;overflow:hidden;border-bottom:1px solid #f3f4f6;position:relative;cursor:pointer}
+.cimg img{width:100%;height:100%;object-fit:cover}
+.noimg{display:flex;flex-direction:column;align-items:center;gap:7px;color:#d1d5db;font-size:12px}
+.cbody{padding:16px}
+.cheader{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.cnome{font-size:15px;font-weight:700;color:#1f2937;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:155px}
+.btipo{background:#fff7ed;color:#c2410c;padding:3px 10px;border-radius:18px;font-size:11px;font-weight:600;white-space:nowrap}
+.cfields{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px;color:#6b7280;margin-bottom:14px}
+.fl{font-weight:600;color:#374151}
+.est{display:inline-flex;padding:2px 9px;border-radius:18px;font-size:11px;font-weight:600}
+.eA{background:#fef3c7;color:#92400e}.eP{background:#dbeafe;color:#1e40af}.eC{background:#d1fae5;color:#065f46}.ePe{background:#f3f4f6;color:#4b5563}
+.cactions{display:flex;gap:6px}
+.bver{flex:1;background:#f3f4f6;border:none;border-radius:10px;padding:8px;font-size:12px;font-weight:600;color:#374151;cursor:pointer}
+.bver:hover{background:#e5e7eb}
+.bedit{flex:1;background:#f97316;border:none;border-radius:10px;padding:8px;font-size:12px;font-weight:600;color:#fff;cursor:pointer}
+.bedit:hover{background:#ea6c0a}
+.bdel{background:#fee2e2;border:none;border-radius:10px;padding:8px 10px;font-size:12px;color:#dc2626;cursor:pointer}
+.empty{text-align:center;padding:48px;color:#9ca3af;grid-column:1/-1;font-size:13px}
+.fcnt{position:absolute;bottom:6px;right:6px;background:rgba(0,0,0,.55);color:#fff;font-size:10px;padding:2px 7px;border-radius:16px}
+.sync-bar{display:flex;align-items:center;gap:8px;font-size:12px;color:#6b7280;margin-bottom:14px}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0}
+.sync-dot.syncing{background:#f97316;animation:pulse 1s infinite}
+.sync-dot.err{background:#ef4444}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.mbg{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:100;padding:0}
+@media(min-width:600px){.mbg{align-items:center;padding:16px}}
+.mdl{background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;padding:24px;box-shadow:0 -8px 40px rgba(0,0,0,.15)}
+@media(min-width:600px){.mdl{border-radius:24px}}
+.mdl-handle{width:40px;height:4px;background:#e5e7eb;border-radius:4px;margin:0 auto 20px}
+.mdl h2{font-size:17px;font-weight:700;color:#1f2937;margin-bottom:18px}
+.mg{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mf{grid-column:1/-1}
+.mdl label{display:block;font-size:11px;font-weight:600;color:#6b7280;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px}
+.mdl input,.mdl select,.mdl textarea{width:100%;border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;font-size:14px;outline:none;color:#374151;font-family:inherit;background:#fff}
+.mdl input:focus,.mdl select:focus,.mdl textarea:focus{border-color:#f97316;box-shadow:0 0 0 3px rgba(249,115,22,.12)}
+.mdl textarea{min-height:70px;resize:vertical}
+.uzone{border:2px dashed #e5e7eb;border-radius:14px;padding:18px;text-align:center;cursor:pointer;position:relative;transition:border-color .15s}
+.uzone:hover,.uzone.drag{border-color:#f97316;background:#fff7ed}
+.uzone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.uzone p{font-size:12px;color:#9ca3af;margin-top:5px}
+.prevrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.pwrap{position:relative;width:56px;height:56px}
+.pimg{width:56px;height:56px;border-radius:8px;object-fit:cover;border:1px solid #e5e7eb}
+.prm{position:absolute;top:-5px;right:-5px;background:#dc2626;color:#fff;border:none;border-radius:50%;width:17px;height:17px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.existing-fotos{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.existing-wrap{position:relative;width:56px;height:56px}
+.existing-img{width:56px;height:56px;border-radius:8px;object-fit:cover;border:2px solid #f97316}
+.existing-rm{position:absolute;top:-5px;right:-5px;background:#dc2626;color:#fff;border:none;border-radius:50%;width:17px;height:17px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.existing-label{font-size:11px;color:#6b7280;margin-top:6px;margin-bottom:4px}
+.mact{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+.bcanc{background:#f3f4f6;border:none;border-radius:10px;padding:10px 18px;font-size:14px;font-weight:600;cursor:pointer;color:#374151}
+.bsave{background:#f97316;border:none;border-radius:10px;padding:10px 22px;font-size:14px;font-weight:600;color:#fff;cursor:pointer;display:flex;align-items:center;gap:8px}
+.bsave:disabled{opacity:.6;cursor:not-allowed}
+.lb{position:fixed;inset:0;background:rgba(0,0,0,.93);display:flex;align-items:center;justify-content:center;z-index:200;flex-direction:column;gap:12px}
+.lb img{max-width:92vw;max-height:76vh;border-radius:10px;object-fit:contain}
+.lbclose{position:fixed;top:14px;right:16px;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:18px;cursor:pointer;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center}
+.lbnav{display:flex;gap:14px;align-items:center}
+.lbbtn{background:rgba(255,255,255,.15);border:none;color:#fff;width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center}
+.lbbtn:disabled{opacity:.3}
+.lbct{color:rgba(255,255,255,.6);font-size:12px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1f2937;color:#fff;padding:11px 20px;border-radius:12px;font-size:13px;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+.install-banner{background:#fff;border:1px solid #fed7aa;border-radius:14px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px}
+.install-banner-icon{width:40px;height:40px;background:#f97316;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;flex-shrink:0}
+.install-banner p{font-size:13px;color:#374151;flex:1}
+.install-banner p strong{color:#1f2937}
+.btn-install{background:#f97316;color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn-dismiss{background:transparent;border:none;color:#9ca3af;font-size:18px;cursor:pointer;padding:4px}
+@media(max-width:640px){.filters{grid-template-columns:1fr 1fr}.btn-f{grid-column:1/-1}.app{padding:14px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="logo">
+      <div class="logo-icon">S</div>
+      <div><h1>Personalizações Sartis</h1><p>Gestão interna · bordados, DTF e vinil</p></div>
+    </div>
+    <button class="btn-novo" onclick="openModal()">+ Nova</button>
+  </div>
+
+  <div id="install-banner" style="display:none" class="install-banner">
+    <div class="install-banner-icon">S</div>
+    <p><strong>Instalar como app</strong><br>Adiciona ao ecrã principal para acesso rápido</p>
+    <button class="btn-install" id="btn-install-pwa">Instalar</button>
+    <button class="btn-dismiss" onclick="dismissInstall()">✕</button>
+  </div>
+
+  <div class="sync-bar">
+    <div class="sync-dot" id="sync-dot"></div>
+    <span id="sync-label">Ligado ao Google Sheets</span>
+  </div>
+
+  <div class="filters">
+    <input type="text" id="s-cliente" placeholder="🔍  Pesquisar cliente..." oninput="renderGrid()">
+    <select id="s-tipo" onchange="renderGrid()"><option value="">Tipo</option><option>DTF</option><option>Bordado</option><option>Vinil</option><option>Serigrafia</option></select>
+    <select id="s-estado" onchange="renderGrid()"><option value="">Estado</option><option>Pendente</option><option>Aprovado</option><option>Produção</option><option>Concluído</option></select>
+    <select id="s-maq" onchange="renderGrid()"><option value="">Máquina</option><option>Máquina 1</option><option>Máquina 2</option><option>Máquina 3</option><option>Máquina 4</option><option>Máquina 5</option><option>Máquina 6</option></select>
+    <button class="btn-f" onclick="renderGrid()">Filtrar</button>
+  </div>
+  <div class="grid" id="grid"><div class="empty">A carregar...</div></div>
+</div>
+
+<!-- Modal -->
+<div class="mbg" id="modal" style="display:none" onclick="bgc(event)">
+  <div class="mdl">
+    <div class="mdl-handle"></div>
+    <h2 id="mtitle">➕ Nova Personalização</h2>
+    <div class="mg">
+      <div class="mf"><label>Cliente</label><input type="text" id="mc" placeholder="Nome do cliente"></div>
+      <div><label>Ref. artigo</label><input type="text" id="mr" placeholder="REF-001"></div>
+      <div><label>Tipo</label><select id="mt"><option value="">Selecionar</option><option>DTF</option><option>Bordado</option><option>Vinil</option><option>Serigrafia</option></select></div>
+      <div><label>Local</label><input type="text" id="ml" placeholder="Peito, Costas, Manga..."></div>
+      <div><label>Máquina</label><select id="mm"><option value="">Selecionar</option><option>Máquina 1</option><option>Máquina 2</option><option>Máquina 3</option><option>Máquina 4</option><option>Máquina 5</option><option>Máquina 6</option></select></div>
+      <div><label>Operador</label><input type="text" id="mo" placeholder="Nome do operador"></div>
+      <div><label>Data</label><input type="date" id="md"></div>
+      <div><label>Estado</label><select id="me"><option>Pendente</option><option>Aprovado</option><option>Produção</option><option>Concluído</option></select></div>
+      <div class="mf"><label>Observações</label><textarea id="mob" placeholder="Notas adicionais..."></textarea></div>
+      <div class="mf">
+        <label>Fotos da personalização</label>
+        <div id="existing-fotos-section" style="display:none">
+          <div class="existing-label">📎 Fotos já guardadas (clica no ✕ para remover):</div>
+          <div class="existing-fotos" id="existing-fotos"></div>
+        </div>
+        <div class="uzone" id="dz">
+          <input type="file" accept="image/*" multiple onchange="hf(this.files)">
+          <svg width="30" height="30" fill="none" stroke="#d1d5db" stroke-width="1.5" viewBox="0 0 24 24"><path d="M4 16l4-4 4 4 4-6 4 6"/><rect x="3" y="3" width="18" height="18" rx="3"/></svg>
+          <p>Clica ou arrasta novas fotos aqui</p>
+        </div>
+        <div class="prevrow" id="prev"></div>
+      </div>
+    </div>
+    <div class="mact">
+      <button class="bcanc" onclick="closeModal()">Cancelar</button>
+      <button class="bsave" id="bsave" onclick="salvar()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+        Guardar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lb" id="lb" style="display:none" onclick="lbbc(event)">
+  <button class="lbclose" onclick="closeLb()">✕</button>
+  <img id="lbimg" src="" alt="">
+  <div class="lbnav">
+    <button class="lbbtn" id="lbprev" onclick="lbn(-1)">‹</button>
+    <span class="lbct" id="lbct"></span>
+    <button class="lbbtn" id="lbnext" onclick="lbn(1)">›</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API='https://script.google.com/macros/s/AKfycby88B3vrrQaXJifxE9KTCEiUSAX6lp_DtxRvtTCF3rllb_SErYAqPo3kTmF_UOC1-kZ/exec';
+let pedidos=[],editId=null,pending=[],existingFotos=[],lbF=[],lbI=0;
+let deferredPrompt=null;
+
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();deferredPrompt=e;
+  if(!localStorage.getItem('installDismissed'))
+    document.getElementById('install-banner').style.display='flex';
+});
+document.getElementById('btn-install-pwa')?.addEventListener('click',()=>{
+  if(!deferredPrompt)return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(()=>{deferredPrompt=null;document.getElementById('install-banner').style.display='none';});
+});
+function dismissInstall(){document.getElementById('install-banner').style.display='none';localStorage.setItem('installDismissed','1');}
+
+if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+
+function setSyncStatus(s){
+  const dot=document.getElementById('sync-dot');
+  const lbl=document.getElementById('sync-label');
+  dot.className='sync-dot'+(s==='syncing'?' syncing':s==='err'?' err':'');
+  lbl.textContent=s==='syncing'?'A sincronizar...':s==='err'?'Erro de ligação':'Ligado ao Google Sheets · fotos no Drive';
+}
+
+function toast(m,d=2800){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),d);}
+
+async function load(){
+  setSyncStatus('syncing');
+  document.getElementById('grid').innerHTML='<div class="empty">A carregar...</div>';
+  try{
+    const r=await fetch(API+'?t='+Date.now());
+    const data=await r.json();
+    pedidos=data.filter(r=>r.id).map(r=>({
+      id:String(r.id),cliente:r.cliente||'',ref:r.ref||'',tipo:r.tipo||'',
+      local:r.local||'',maquina:r.maquina||'',operador:r.operador||'',
+      data:r.data||'',estado:r.estado||'Pendente',obs:r.obs||'',
+      fotos:r.fotos?String(r.fotos).split('|||').filter(Boolean):[]
+    }));
+    setSyncStatus('ok');
+  }catch(e){pedidos=[];setSyncStatus('err');toast('❌ Sem ligação ao Google Sheets');}
+  renderGrid();
+}
+
+const dz=document.getElementById('dz');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag')});
+dz.addEventListener('dragleave',()=>dz.classList.remove('drag'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag');hf(e.dataTransfer.files)});
+
+function hf(files){
+  Array.from(files).forEach(f=>{
+    if(!f.type.startsWith('image/'))return;
+    const r=new FileReader();
+    r.onload=e=>{pending.push(e.target.result);rp();};
+    r.readAsDataURL(f);
+  });
+}
+function rp(){
+  document.getElementById('prev').innerHTML=pending.map((d,i)=>
+    `<div class="pwrap"><img class="pimg" src="${d}"><button class="prm" onclick="rmp(${i})">✕</button></div>`
+  ).join('');
+}
+function rmp(i){pending.splice(i,1);rp();}
+
+function renderExistingFotos(){
+  const sec=document.getElementById('existing-fotos-section');
+  const cont=document.getElementById('existing-fotos');
+  if(!existingFotos.length){sec.style.display='none';return;}
+  sec.style.display='block';
+  cont.innerHTML=existingFotos.map((f,i)=>
+    `<div class="existing-wrap"><img class="existing-img" src="${f}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2256%22 height=%2256%22><rect width=%2256%22 height=%2256%22 fill=%22%23f3f4f6%22/><text x=%2228%22 y=%2232%22 text-anchor=%22middle%22 fill=%22%23d1d5db%22 font-size=%2210%22>foto</text></svg>'"><button class="existing-rm" onclick="removeExisting(${i})">✕</button></div>`
+  ).join('');
+}
+function removeExisting(i){existingFotos.splice(i,1);renderExistingFotos();}
+
+function openModal(id){
+  editId=id||null;pending=[];existingFotos=[];rp();renderExistingFotos();
+  if(id){
+    const p=pedidos.find(x=>x.id===id);if(!p)return;
+    document.getElementById('mc').value=p.cliente;
+    document.getElementById('mr').value=p.ref;
+    document.getElementById('mt').value=p.tipo;
+    document.getElementById('ml').value=p.local;
+    document.getElementById('mm').value=p.maquina;
+    document.getElementById('mo').value=p.operador;
+    document.getElementById('md').value=p.data;
+    document.getElementById('me').value=p.estado;
+    document.getElementById('mob').value=p.obs;
+    existingFotos=[...(p.fotos||[])];
+    renderExistingFotos();
+    document.getElementById('mtitle').textContent='✏️ Editar Personalização';
+  }else{
+    ['mc','mr','ml','mo','mob'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('mt').value='';
+    document.getElementById('mm').value='';
+    document.getElementById('me').value='Pendente';
+    document.getElementById('md').value=new Date().toISOString().split('T')[0];
+    document.getElementById('mtitle').textContent='➕ Nova Personalização';
+  }
+  document.getElementById('modal').style.display='flex';
+}
+function closeModal(){document.getElementById('modal').style.display='none';}
+function bgc(e){if(e.target===document.getElementById('modal'))closeModal();}
+
+async function salvar(){
+  const c=document.getElementById('mc').value.trim();
+  if(!c){alert('Nome do cliente é obrigatório.');return;}
+  const btn=document.getElementById('bsave');
+  btn.disabled=true;
+  btn.innerHTML='⏳ A guardar fotos no Drive...';
+  setSyncStatus('syncing');
+  const obj={
+    cliente:c,ref:document.getElementById('mr').value.trim(),
+    tipo:document.getElementById('mt').value,local:document.getElementById('ml').value.trim(),
+    maquina:document.getElementById('mm').value,operador:document.getElementById('mo').value.trim(),
+    data:document.getElementById('md').value,estado:document.getElementById('me').value,
+    obs:document.getElementById('mob').value.trim()
+  };
+  try{
+    if(editId){
+      const allFotos=[...existingFotos,...pending].join('|||');
+      await fetch(API,{method:'POST',body:JSON.stringify({action:'update',id:editId,...obj,fotos:allFotos})});
+      toast('✅ Pedido atualizado! Fotos no Drive.');
+    }else{
+      const id=Date.now().toString();
+      await fetch(API,{method:'POST',body:JSON.stringify({action:'add',id,...obj,fotos:pending.join('|||')})});
+      toast('✅ Guardado! Fotos enviadas para o Google Drive.');
+    }
+    await load();closeModal();
+  }catch(e){toast('❌ Erro ao guardar.');setSyncStatus('err');}
+  btn.disabled=false;
+  btn.innerHTML='<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>Guardar';
+}
+
+async function del(id){
+  if(!confirm('Remover este pedido permanentemente?'))return;
+  setSyncStatus('syncing');
+  try{
+    await fetch(API,{method:'POST',body:JSON.stringify({action:'delete',id})});
+    toast('🗑 Pedido removido.');await load();
+  }catch(e){toast('Erro ao remover.');setSyncStatus('err');}
+}
+
+function openLb(fotos,i){lbF=fotos;lbI=i;ulb();document.getElementById('lb').style.display='flex';}
+function closeLb(){document.getElementById('lb').style.display='none';}
+function lbbc(e){if(e.target===document.getElementById('lb'))closeLb();}
+function lbn(d){lbI=Math.max(0,Math.min(lbF.length-1,lbI+d));ulb();}
+function ulb(){
+  document.getElementById('lbimg').src=lbF[lbI];
+  document.getElementById('lbct').textContent=(lbI+1)+' / '+lbF.length;
+  document.getElementById('lbprev').disabled=lbI===0;
+  document.getElementById('lbnext').disabled=lbI===lbF.length-1;
+}
+
+function fd(d){if(!d)return'—';if(d.includes('/'))return d;const[y,m,dd]=d.split('-');return`${dd}/${m}/${y}`;}
+const ec={Aprovado:'eA',Produção:'eP',Concluído:'eC',Pendente:'ePe'};
+
+function renderGrid(){
+  const q=(document.getElementById('s-cliente').value||'').toLowerCase();
+  const t=document.getElementById('s-tipo').value;
+  const e=document.getElementById('s-estado').value;
+  const m=document.getElementById('s-maq').value;
+  let l=pedidos.filter(p=>{
+    if(q&&!p.cliente.toLowerCase().includes(q))return false;
+    if(t&&p.tipo!==t)return false;
+    if(e&&p.estado!==e)return false;
+    if(m&&p.maquina!==m)return false;
+    return true;
+  });
+  const g=document.getElementById('grid');
+  if(!l.length){g.innerHTML='<div class="empty">Nenhum registo encontrado.</div>';return;}
+  g.innerHTML=l.map(p=>{
+    const fotos=p.fotos||[];
+    const cls=ec[p.estado]||'ePe';
+    const fi=fotos.length
+      ?`<img src="${fotos[0]}" alt="foto" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML='<div class=noimg><svg width=38 height=38 fill=none stroke=#d1d5db stroke-width=1.5 viewBox=\\'0 0 24 24\\'><rect x=3 y=3 width=18 height=18 rx=3/><path d=\\'M3 15l5-5 4 4 3-3 5 5\\'/></svg><span>Foto indisponível</span></div>'">${fotos.length>1?`<div class="fcnt">+${fotos.length} fotos</div>`:''}`
+      :`<div class="noimg"><svg width="38" height="38" fill="none" stroke="#d1d5db" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 15l5-5 4 4 3-3 5 5"/><circle cx="8.5" cy="8.5" r="1.5"/></svg><span>Sem foto</span></div>`;
+    return`<div class="card">
+      <div class="cimg" onclick='openLb(${JSON.stringify(fotos.length?fotos:[""])},0)'>${fi}</div>
+      <div class="cbody">
+        <div class="cheader">
+          <div class="cnome" title="${p.cliente}">${p.cliente}</div>
+          ${p.tipo?`<span class="btipo">${p.tipo}</span>`:''}
+        </div>
+        <div class="cfields">
+          <div><span class="fl">Local:</span> ${p.local||'—'}</div>
+          <div><span class="fl">Máquina:</span> ${p.maquina||'—'}</div>
+          <div><span class="fl">Data:</span> ${fd(p.data)}</div>
+          <div><span class="fl">Estado:</span> <span class="est ${cls}">${p.estado}</span></div>
+          ${p.ref?`<div><span class="fl">Ref.:</span> ${p.ref}</div>`:''}
+          ${p.operador?`<div><span class="fl">Operador:</span> ${p.operador}</div>`:''}
+        </div>
+        <div class="cactions">
+          <button class="bver" onclick='openLb(${JSON.stringify(fotos.length?fotos:[""])},0)'>📷 Ver fotos</button>
+          <button class="bedit" onclick="openModal('${p.id}')">Editar</button>
+          <button class="bdel" onclick="del('${p.id}')">🗑</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+load();
+</script>
+</body>
+</html>
